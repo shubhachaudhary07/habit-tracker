@@ -484,3 +484,6 @@ body.kid-mode .habit-actions { display: none; }
 
 /* Little lock badge look for the unlock button while locked */
 body.kid-mode #lockBtn { border-color: var(--amber); color: var(--amber); }
+
+/* When the role is set by the URL (?u=...), hide the manual lock button */
+body.role-admin #lockBtn, body.role-kid #lockBtn { display: none; }

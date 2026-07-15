@@ -1,10 +1,11 @@
 /* Simple offline cache for the Habit Tracker app. */
-const CACHE = "habit-tracker-v8";
+const CACHE = "habit-tracker-v9";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./firebase-config.js",
   "./icon.svg",
   "./manifest.webmanifest",
 ];

@@ -47,6 +47,60 @@ let habitScrollMemory = null;
 let editingHabitId = null;
 let selectedEmoji = "🎯";
 
+// ---------- Roles (from URL ?u=...) ----------
+// ?u=shubha -> admin (full access). ?u=darsh / ?u=gauri -> locked to that profile.
+const ADMIN_ROLES = ["shubha", "admin", "parent"];
+const ROLE = (new URLSearchParams(location.search).get("u") || "").trim().toLowerCase();
+let roleLocked = false; // local-only lock driven by role (never synced)
+
+function isAdminRole() { return !ROLE || ADMIN_ROLES.includes(ROLE); }
+
+// ---------- Cloud sync (Firebase Firestore) ----------
+let db = null, familyRef = null, cloudTimer = null, cloudReady = false;
+
+function initCloud() {
+  if (!window.FIREBASE_CONFIG || typeof firebase === "undefined") return; // local-only mode
+  try {
+    firebase.initializeApp(window.FIREBASE_CONFIG);
+    db = firebase.firestore();
+    familyRef = db.collection("families").doc(window.FAMILY_ID || "family");
+    familyRef.onSnapshot(
+      (doc) => {
+        if (doc.metadata.hasPendingWrites) return; // ignore our own just-written data
+        const data = doc.data();
+        if (data && Array.isArray(data.profiles)) {
+          // Sync only shared DATA; keep this device's own view/lock settings.
+          state.profiles = data.profiles;
+          if (typeof data.pin !== "undefined") state.pin = data.pin;
+          migrate();
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+          if (!state.currentProfileId && state.profiles[0]) state.currentProfileId = state.profiles[0].id;
+          applyRoleLock();
+          renderAll();
+        } else if (!cloudReady) {
+          cloudSave(true); // first run: seed the cloud with local data
+        }
+        cloudReady = true;
+      },
+      (err) => console.warn("Cloud sync error:", err)
+    );
+  } catch (e) {
+    console.warn("Cloud init failed, running local-only:", e);
+  }
+}
+
+// Push shared data (profiles + pin only) to the cloud, debounced.
+function cloudSave(immediate) {
+  if (!familyRef) return;
+  if (!cloudReady && !immediate) return; // wait until we've seen the cloud once
+  clearTimeout(cloudTimer);
+  const write = () =>
+    familyRef.set({ profiles: state.profiles, pin: state.pin || null, _updatedAt: Date.now() })
+      .catch((e) => console.warn("Cloud write failed:", e));
+  if (immediate) write();
+  else cloudTimer = setTimeout(write, 600);
+}
+
 // Kid-friendly emoji choices for the picker
 const EMOJI_CHOICES = [
   "🎯","📚","✏️","📖","🧮","🔬","🎨","🎵",
@@ -73,7 +127,9 @@ function load() {
 }
 
 function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch (e) { console.warn("Local save failed", e); }
+  cloudSave();
 }
 
 function currentProfile() {
@@ -141,7 +197,7 @@ function renderProfiles() {
 }
 
 profileSelect.addEventListener("change", (e) => {
-  if (state.locked) { applyMode(); return; }
+  if (state.locked || roleLocked) { applyRoleLock(); return; }
   state.currentProfileId = e.target.value;
   reminderDismissed = false;
   save();
@@ -149,7 +205,7 @@ profileSelect.addEventListener("change", (e) => {
 });
 
 $("addProfileBtn").addEventListener("click", () => {
-  if (state.locked) return;
+  if (state.locked || roleLocked) return;
   const name = prompt("Profile name (e.g. a child's name):");
   if (!name || !name.trim()) return;
   const p = newProfile(name.trim());
@@ -202,6 +258,34 @@ function toggleLock() {
   renderAll();
 }
 
+// Applies the URL role (?u=...) on top of the manual Kid Mode.
+function applyRoleLock() {
+  if (ROLE && !isAdminRole()) {
+    // Child role: lock to the profile whose name matches the role.
+    roleLocked = true;
+    const prof = state.profiles.find((p) => (p.name || "").trim().toLowerCase() === ROLE);
+    if (prof) {
+      state.currentProfileId = prof.id;
+      $("lockedProfileName").textContent = prof.name;
+    } else {
+      const nice = ROLE.charAt(0).toUpperCase() + ROLE.slice(1);
+      $("lockedProfileName").textContent = `${nice} — ask admin to create this profile`;
+      state.currentProfileId = null;
+    }
+    document.body.classList.add("kid-mode", "role-kid");
+    document.body.classList.remove("role-admin");
+    return;
+  }
+  // Admin (or no role): full access.
+  roleLocked = false;
+  if (ROLE) {
+    state.locked = false;
+    document.body.classList.add("role-admin");
+    document.body.classList.remove("kid-mode", "role-kid");
+  }
+  applyMode();
+}
+
 // Applies lock restrictions to the UI and forces the locked profile.
 function applyMode() {
   if (state.locked && state.lockedProfileId) {
@@ -214,7 +298,7 @@ function applyMode() {
 }
 
 $("deleteProfileBtn").addEventListener("click", () => {
-  if (state.locked) return;
+  if (state.locked || roleLocked) return;
   const p = currentProfile();
   if (!p) return;
   if (state.profiles.length === 1) {
@@ -378,7 +462,7 @@ function restoreHabitScroll() {
 }
 
 function deleteHabit(id) {
-  if (state.locked) return; // Kid Mode: cannot delete habits
+  if (state.locked || roleLocked) return; // Kid Mode: cannot delete habits
   const p = currentProfile();
   if (!confirm("Delete this habit and its history?")) return;
   p.habits = p.habits.filter((h) => h.id !== id);
@@ -396,7 +480,7 @@ $("habitModal").addEventListener("click", (e) => {
 });
 
 function openHabitModal(habit) {
-  if (state.locked) return; // Kid Mode: habits are fill-only
+  if (state.locked || roleLocked) return; // Kid Mode: habits are fill-only
   editingHabitId = habit ? habit.id : null;
   $("habitModalTitle").textContent = habit ? "Edit Habit" : "Add Habit";
   $("habitName").value = habit ? habit.name : "";
@@ -434,7 +518,7 @@ function closeHabitModal() {
 }
 
 function saveHabitFromModal() {
-  if (state.locked) return; // Kid Mode: cannot create/edit habits
+  if (state.locked || roleLocked) return; // Kid Mode: cannot create/edit habits
   const p = currentProfile();
   const name = $("habitName").value.trim();
   if (!name) { alert("Please enter a habit name."); return; }
@@ -479,6 +563,7 @@ const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
 
 function renderTodos() {
   const p = currentProfile();
+  if (!p) { $("todoList").innerHTML = ""; $("todoEmptyHint").style.display = "block"; return; }
   const dateStr = iso(cursorDay);
   const isToday = dateStr === iso(new Date());
   $("dayLabel").textContent =
@@ -723,6 +808,7 @@ function shiftCalMonth(delta) {
 }
 
 function eventsOn(profile, dateStr) {
+  if (!profile || !profile.events) return [];
   return profile.events
     .filter((e) => e.date === dateStr)
     .sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99"));
@@ -886,6 +972,7 @@ function renderAll() {
 
 seedIfEmpty();
 migrate();
-applyMode();
-save();
+initCloud();      // sets up cloud sync (no-op if not configured)
+applyRoleLock();  // apply URL role (?u=shubha/darsh/gauri)
+save();           // persist locally; cloud write is suppressed until first sync
 renderAll();

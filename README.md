@@ -28,9 +28,37 @@ This app is hosted for free with GitHub Pages. Once deployed:
 3. **Android (Chrome):** tap the ⋮ menu → **Install app** / **Add to Home screen**.
 4. Launch it from the home screen icon — it opens full-screen and works offline.
 
+## Family setup (roles + cloud sync)
+
+The app supports role-based URLs so each person sees the right thing:
+
+| Person | URL | Can do |
+| --- | --- | --- |
+| Shubha (admin) | `.../habit-tracker/?u=shubha` | See/manage all profiles, create & edit habits for everyone |
+| Darsh | `.../habit-tracker/?u=darsh` | See only his profile, tick habits, use To-Do / Calendar / Reports |
+| Gauri | `.../habit-tracker/?u=gauri` | See only her profile, tick habits, use To-Do / Calendar / Reports |
+
+The child role locks to the profile whose **name matches** the URL (so the admin must
+create profiles named exactly `Darsh` and `Gauri`).
+
+### Cloud sync setup (needed so all devices share the same data)
+
+Without this, each device keeps its own separate data. To sync across phones:
+
+1. Go to https://console.firebase.google.com and create a project (free).
+2. In the project, open **Build → Firestore Database → Create database** (Start in **test mode**).
+3. Open **Project settings → General**, scroll to **Your apps**, click the **Web** (`</>`) icon,
+   register an app, and copy the `firebaseConfig` object it shows.
+4. Paste that object into `firebase-config.js` (replace the `null`), commit, and push.
+5. Everyone now shares the same data in real time.
+
+Note: test-mode Firestore rules are open. For a private family tool this is usually fine,
+but see the app author if you want to add sign-in later.
+
 ## Run locally
 
 Just open `index.html` in any modern browser. No build step, no dependencies.
+Cloud sync is optional; without it the app stores data on the current device only.
 
 ## Tech
 
