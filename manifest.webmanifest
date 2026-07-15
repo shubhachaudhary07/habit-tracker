@@ -1,0 +1,19 @@
+{
+  "name": "Habit Tracker",
+  "short_name": "Habits",
+  "description": "Track habits, to-dos, and events with weekly and monthly reward reports.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f7fb",
+  "theme_color": "#4f6ef7",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

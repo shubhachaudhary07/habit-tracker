@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Habit Tracker</title>
+  <meta name="theme-color" content="#4f6ef7" />
+  <meta name="description" content="Track habits, to-dos, and events with weekly and monthly reward reports." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Habits" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">✓</span>
+      <h1>Habit Tracker</h1>
+    </div>
+    <div class="profile-area">
+      <label for="profileSelect">Profile</label>
+      <select id="profileSelect"></select>
+      <button id="addProfileBtn" class="btn ghost" title="Add profile">+ Profile</button>
+      <button id="deleteProfileBtn" class="btn ghost danger" title="Delete current profile">🗑</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-view="habits"><span class="tab-icon">✅</span><span class="tab-label">Habits</span></button>
+    <button class="tab" data-view="todos"><span class="tab-icon">📝</span><span class="tab-label">To-Do</span></button>
+    <button class="tab" data-view="calendar"><span class="tab-icon">📅</span><span class="tab-label">Calendar</span></button>
+    <button class="tab" data-view="weekly"><span class="tab-icon">📊</span><span class="tab-label">Weekly</span></button>
+    <button class="tab" data-view="monthly"><span class="tab-icon">🏆</span><span class="tab-label">Monthly</span></button>
+  </nav>
+
+  <div id="reminderBanner" class="reminder-banner"></div>
+
+  <main id="app">
+    <!-- HABITS VIEW -->
+    <section id="view-habits" class="view active">
+      <div class="view-head">
+        <div class="month-nav">
+          <button id="prevMonth" class="btn ghost">‹</button>
+          <h2 id="monthLabel"></h2>
+          <button id="nextMonth" class="btn ghost">›</button>
+        </div>
+        <button id="addHabitBtn" class="btn primary">+ Add Habit</button>
+      </div>
+      <div class="points-banner" id="monthPointsBanner"></div>
+      <div class="table-wrap">
+        <table id="habitTable" class="habit-table"></table>
+      </div>
+      <p class="empty-hint" id="habitEmptyHint">No habits yet. Add one to start tracking.</p>
+    </section>
+
+    <!-- TODO VIEW -->
+    <section id="view-todos" class="view">
+      <div class="view-head">
+        <div class="month-nav">
+          <button id="prevDay" class="btn ghost">‹</button>
+          <h2 id="dayLabel"></h2>
+          <button id="nextDay" class="btn ghost">›</button>
+        </div>
+        <button id="todayBtn" class="btn ghost">Today</button>
+      </div>
+      <form id="todoForm" class="todo-form">
+        <input type="text" id="todoInput" placeholder="Add a task..." autocomplete="off" />
+        <select id="todoPriority">
+          <option value="high">High</option>
+          <option value="medium" selected>Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <button type="submit" class="btn primary">Add</button>
+      </form>
+      <ul id="todoList" class="todo-list"></ul>
+      <p class="empty-hint" id="todoEmptyHint">No tasks for this day.</p>
+    </section>
+
+    <!-- CALENDAR VIEW -->
+    <section id="view-calendar" class="view">
+      <div class="view-head">
+        <div class="month-nav">
+          <button id="prevCalMonth" class="btn ghost">‹</button>
+          <h2 id="calMonthLabel"></h2>
+          <button id="nextCalMonth" class="btn ghost">›</button>
+        </div>
+        <button id="calTodayBtn" class="btn ghost">Today</button>
+      </div>
+      <div class="cal-weekdays" id="calWeekdays"></div>
+      <div class="cal-grid" id="calGrid"></div>
+    </section>
+
+    <!-- WEEKLY VIEW -->
+    <section id="view-weekly" class="view">
+      <div class="view-head">
+        <div class="month-nav">
+          <button id="prevWeek" class="btn ghost">‹</button>
+          <h2 id="weekLabel"></h2>
+          <button id="nextWeek" class="btn ghost">›</button>
+        </div>
+      </div>
+      <div id="weeklyReport" class="report"></div>
+    </section>
+
+    <!-- MONTHLY VIEW -->
+    <section id="view-monthly" class="view">
+      <div class="view-head">
+        <div class="month-nav">
+          <button id="prevMonthR" class="btn ghost">‹</button>
+          <h2 id="monthReportLabel"></h2>
+          <button id="nextMonthR" class="btn ghost">›</button>
+        </div>
+      </div>
+      <div id="monthlyReport" class="report"></div>
+    </section>
+  </main>
+
+  <!-- Habit modal -->
+  <div id="habitModal" class="modal-backdrop">
+    <div class="modal">
+      <h3 id="habitModalTitle">Add Habit</h3>
+      <label>Icon
+        <div class="emoji-field">
+          <span id="emojiPreview" class="emoji-preview">🎯</span>
+          <div id="emojiPicker" class="emoji-picker"></div>
+        </div>
+      </label>
+      <label>Name<input type="text" id="habitName" placeholder="e.g. Read 20 minutes" /></label>
+      <label>Category<input type="text" id="habitCategory" placeholder="e.g. Study, Health" /></label>
+      <label>Target days per week
+        <input type="number" id="habitGoal" min="1" max="7" value="7" />
+      </label>
+      <label>Reward points per completion
+        <input type="number" id="habitPoints" min="1" max="100" value="10" />
+      </label>
+      <div class="modal-actions">
+        <button id="cancelHabit" class="btn ghost">Cancel</button>
+        <button id="saveHabit" class="btn primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Event modal -->
+  <div id="eventModal" class="modal-backdrop">
+    <div class="modal">
+      <h3 id="eventModalTitle">Add Event</h3>
+      <p id="eventModalDate" class="event-modal-date"></p>
+      <div id="eventDayList" class="event-day-list"></div>
+      <label>Type
+        <select id="eventType">
+          <option value="meeting">📅 Meeting</option>
+          <option value="birthday">🎂 Birthday</option>
+          <option value="party">🎉 Party</option>
+          <option value="reminder">⏰ Reminder</option>
+          <option value="appointment">🩺 Appointment</option>
+          <option value="other">📌 Other</option>
+        </select>
+      </label>
+      <label>Title<input type="text" id="eventTitle" placeholder="e.g. Dentist appointment" /></label>
+      <label>Time (optional)<input type="time" id="eventTime" /></label>
+      <label>Note (optional)<input type="text" id="eventNote" placeholder="Details, location..." /></label>
+      <div class="modal-actions">
+        <button id="cancelEvent" class="btn ghost">Close</button>
+        <button id="saveEvent" class="btn primary">Add Event</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // Register service worker so the app works offline and is installable.
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch((e) => console.warn("SW registration failed", e));
+      });
+    }
+  </script>
+</body>
+</html>
