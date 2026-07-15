@@ -1,5 +1,5 @@
 /* Simple offline cache for the Habit Tracker app. */
-const CACHE = "habit-tracker-v12";
+const CACHE = "habit-tracker-v13";
 const ASSETS = [
   "./",
   "./index.html",

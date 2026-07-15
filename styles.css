@@ -4,9 +4,10 @@
   --ink: #1f2733;
   --muted: #6b7688;
   --line: #e3e8f0;
-  --primary: #4f6ef7;
-  --primary-dark: #3b57d6;
+  --primary: #9b6a9e;      /* mauve */
+  --primary-dark: #7f5482; /* darker mauve for hover */
   --green: #2fbf71;
+  --done: #2f9e5f;         /* checkmark cell fill (strong, tick stays visible) */
   --amber: #f5a623;
   --red: #e5484d;
   --shadow: 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.06);
@@ -102,7 +103,7 @@ main { padding: 22px; max-width: 1100px; margin: 0 auto; }
 .month-nav h2 { margin: 0; font-size: 18px; min-width: 160px; text-align: center; }
 
 .points-banner {
-  background: linear-gradient(90deg, #eef2ff, #f7f9ff);
+  background: linear-gradient(90deg, #f4ecf4, #faf6fa);
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px 16px;
@@ -124,10 +125,12 @@ main { padding: 22px; max-width: 1100px; margin: 0 auto; }
 .hn-text { font-weight: 500; }
 .hn-sub { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
 .hn-sub .cat { display: inline; }
-.habit-table th.today, .habit-table td.today { background: #fff7e6; }
+.habit-table th.today, .habit-table td.today { background: #f1ede3; } /* off-white */
 .habit-table .cat { font-size: 11px; color: var(--muted); display: block; }
 .habit-cell { cursor: pointer; user-select: none; }
-.habit-cell.done { background: var(--green); color: #fff; }
+.habit-cell.done { background: var(--done); color: #fff; font-weight: 700; }
+/* Done must win over the "today" highlight so the tick stays visible on today's column */
+.habit-table td.habit-cell.done { background: var(--done); color: #fff; }
 .habit-cell:hover { outline: 2px solid var(--primary); outline-offset: -2px; }
 .habit-actions { display: flex; gap: 6px; }
 .icon-btn { border: none; background: none; cursor: pointer; color: var(--muted); font-size: 14px; }
@@ -206,7 +209,7 @@ main { padding: 22px; max-width: 1100px; margin: 0 auto; }
   border: none; background: none; cursor: pointer;
   font-size: 20px; padding: 4px; border-radius: 8px; line-height: 1;
 }
-.emoji-picker button:hover { background: #eef2ff; }
+.emoji-picker button:hover { background: #f4ecf4; }
 .emoji-picker button.selected { background: var(--primary); }
 .habit-emoji { margin-right: 6px; }
 
@@ -306,7 +309,7 @@ main { padding: 22px; max-width: 1100px; margin: 0 auto; }
     border-bottom: none;
     border-radius: 10px;
   }
-  .tab.active { background: #eef2ff; border-bottom: none; }
+  .tab.active { background: #f4ecf4; border-bottom: none; }
   .tab-icon { margin-right: 0; font-size: 20px; }
   .tab-label { font-size: 11px; }
 
