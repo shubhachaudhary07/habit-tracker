@@ -172,6 +172,7 @@ main { padding: 22px; max-width: 1100px; margin: 0 auto; }
 .modal-backdrop {
   display: none;
   position: fixed; inset: 0;
+  z-index: 1000; /* above sticky table cells (z 2-3) and bottom nav (z 50) */
   background: rgba(16, 24, 40, .45);
   align-items: center; justify-content: center;
   padding: 20px;
