@@ -1114,9 +1114,34 @@ function maybeShowReminderPopup(items) {
   showReminderPopup(items, `🔔 Today's Reminders (${items.length})`);
 }
 
-// While the app is open, beep at each event's exact time (HH:MM).
+// A simple message popup (used for the nightly habit-tracker nudge).
+function showMessagePopup(title, text) {
+  $("reminderPopupTitle").textContent = title;
+  $("reminderPopupList").innerHTML =
+    `<div class="event-day-item"><span class="e-text">${escapeHtml(text)}</span></div>`;
+  $("reminderPopup").classList.add("open");
+  document.body.classList.add("modal-open");
+  requestBeep();
+}
+
+// Nightly reminder to complete the day's habit tracker (~9:30 PM).
+const NIGHTLY_MINUTES = 21 * 60 + 30; // 21:30
+let nightlyFiredDate = null;
+function checkNightlyReminder() {
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const todayStr = iso(now);
+  // Fire once per day, any time from 9:30 PM onward (in case the app is opened late).
+  if (mins >= NIGHTLY_MINUTES && nightlyFiredDate !== todayStr) {
+    nightlyFiredDate = todayStr;
+    showMessagePopup("🌙 Habit check-in", "Time to complete today's habit tracker before bed!");
+  }
+}
+
+// While the app is open: beep at each event's time, and nudge at night.
 function startEventAlarms() {
-  setInterval(() => {
+  const tick = () => {
+    checkNightlyReminder();
     const p = currentProfile();
     if (!p) return;
     const now = new Date();
@@ -1127,7 +1152,9 @@ function startEventAlarms() {
         showReminderPopup([e], `⏰ ${escapeHtml(e.title)} — now`);
       }
     });
-  }, 20000);
+  };
+  tick();                 // check immediately on open
+  setInterval(tick, 20000);
 }
 
 // ---------- Utilities & init ----------
