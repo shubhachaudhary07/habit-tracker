@@ -43,6 +43,7 @@ let calMonth = new Date().getMonth();
 let calYear = new Date().getFullYear();
 let eventModalDate = null;
 let reminderDismissed = false;
+let habitScrollMemory = null;
 let editingHabitId = null;
 let selectedEmoji = "🎯";
 
@@ -194,7 +195,7 @@ function toggleDone(profile, habitId, dateStr) {
   save();
 }
 
-function renderHabits() {
+function renderHabits(autoScroll = true) {
   const p = currentProfile();
   $("monthLabel").textContent = `${MONTHS[cursorMonth]} ${cursorYear}`;
   const table = $("habitTable");
@@ -219,9 +220,9 @@ function renderHabits() {
     const dateStr = `${cursorYear}-${pad(cursorMonth + 1)}-${pad(d)}`;
     const wd = DAYS[new Date(cursorYear, cursorMonth, d).getDay()];
     const cls = dateStr === todayStr ? "today" : "";
-    hr.innerHTML += `<th class="${cls}">${d}<br><span class="cat">${wd}</span></th>`;
+    hr.innerHTML += `<th class="date-col ${cls}">${d}<br><span class="cat">${wd}</span></th>`;
   }
-  hr.innerHTML += `<th>✓ / Goal</th><th>Points</th><th></th>`;
+  hr.innerHTML += `<th class="col-goal">✓ / Goal</th><th class="col-points">Points</th>`;
   thead.appendChild(hr);
   table.appendChild(thead);
 
@@ -231,19 +232,30 @@ function renderHabits() {
 
   p.habits.forEach((h) => {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td class="habit-name"><span class="habit-emoji">${escapeHtml(h.emoji || "🎯")}</span>${escapeHtml(h.name)}<span class="cat">${escapeHtml(h.category || "")}</span></td>`;
+    tr.innerHTML = `<td class="habit-name">
+      <div class="hn-main"><span class="habit-emoji">${escapeHtml(h.emoji || "🎯")}</span><span class="hn-text">${escapeHtml(h.name)}</span></div>
+      <div class="hn-sub">
+        <span class="cat">${escapeHtml(h.category || "")}</span>
+        <span class="habit-actions">
+          <button class="icon-btn edit" title="Edit">✎</button>
+          <button class="icon-btn del" title="Delete">✕</button>
+        </span>
+      </div>
+    </td>`;
     let count = 0;
     for (let d = 1; d <= dim; d++) {
       const dateStr = `${cursorYear}-${pad(cursorMonth + 1)}-${pad(d)}`;
       const done = isDone(p, h.id, dateStr);
       if (done) count++;
-      const cls = "habit-cell" + (done ? " done" : "") + (dateStr === todayStr ? " today" : "");
+      const cls = "habit-cell date-col" + (done ? " done" : "") + (dateStr === todayStr ? " today" : "");
       const td = document.createElement("td");
       td.className = cls;
       td.textContent = done ? "✓" : "";
       td.addEventListener("click", () => {
+        const wrap = document.querySelector("#view-habits .table-wrap");
+        habitScrollMemory = wrap ? wrap.scrollLeft : null;
         toggleDone(p, h.id, dateStr);
-        renderHabits();
+        renderHabits(false);
       });
       tr.appendChild(td);
     }
@@ -253,25 +265,49 @@ function renderHabits() {
     const weeks = dim / 7;
     const target = Math.round((h.goal || 7) * weeks);
     const summaryTd = document.createElement("td");
-    summaryTd.className = "habit-summary";
+    summaryTd.className = "habit-summary col-goal";
     summaryTd.textContent = `${count} / ${target}`;
     tr.appendChild(summaryTd);
     const ptsTd = document.createElement("td");
+    ptsTd.className = "col-points";
     ptsTd.textContent = pts;
     tr.appendChild(ptsTd);
-    const actTd = document.createElement("td");
-    actTd.innerHTML = `<div class="habit-actions">
-      <button class="icon-btn edit" title="Edit">✎</button>
-      <button class="icon-btn del" title="Delete">✕</button></div>`;
-    actTd.querySelector(".edit").addEventListener("click", () => openHabitModal(h));
-    actTd.querySelector(".del").addEventListener("click", () => deleteHabit(h.id));
-    tr.appendChild(actTd);
+    // Edit/delete icons now live inside the habit-name cell
+    tr.querySelector(".edit").addEventListener("click", () => openHabitModal(h));
+    tr.querySelector(".del").addEventListener("click", () => deleteHabit(h.id));
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
 
   $("monthPointsBanner").innerHTML =
     `<span class="star">★</span> ${monthPoints} reward points earned in ${MONTHS[cursorMonth]}`;
+
+  // On mobile, put today's column first; otherwise preserve the scroll position.
+  if (autoScroll) scrollHabitsToToday();
+  else restoreHabitScroll();
+}
+
+// Positions the horizontal scroll so today's date sits right after the
+// frozen habit column (mobile frozen-pane behavior).
+function scrollHabitsToToday() {
+  if (window.innerWidth > 720) return;
+  requestAnimationFrame(() => {
+    const wrap = document.querySelector("#view-habits .table-wrap");
+    const todayTh = document.querySelector("#habitTable thead th.today");
+    const habitTh = document.querySelector("#habitTable thead th.habit-name");
+    if (!wrap || !todayTh || !habitTh) return;
+    wrap.scrollLeft = todayTh.offsetLeft - habitTh.offsetWidth;
+  });
+}
+
+// Keeps the current horizontal scroll after re-render (e.g. ticking a day).
+function restoreHabitScroll() {
+  if (habitScrollMemory == null) return;
+  const target = habitScrollMemory;
+  requestAnimationFrame(() => {
+    const wrap = document.querySelector("#view-habits .table-wrap");
+    if (wrap) wrap.scrollLeft = target;
+  });
 }
 
 function deleteHabit(id) {

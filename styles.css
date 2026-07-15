@@ -112,8 +112,12 @@ main { padding: 22px; max-width: 1100px; margin: 0 auto; }
 .table-wrap { overflow-x: auto; }
 .habit-table { border-collapse: collapse; width: 100%; background: var(--card); border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); }
 .habit-table th, .habit-table td { border: 1px solid var(--line); padding: 6px 4px; text-align: center; font-size: 13px; }
-.habit-table th.habit-name, .habit-table td.habit-name { text-align: left; min-width: 160px; padding-left: 12px; }
+.habit-table th.habit-name, .habit-table td.habit-name { text-align: left; min-width: 190px; padding-left: 12px; }
 .habit-table thead th { background: #f0f3fa; color: var(--muted); font-weight: 600; }
+.hn-main { display: flex; align-items: center; }
+.hn-text { font-weight: 500; }
+.hn-sub { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
+.hn-sub .cat { display: inline; }
 .habit-table th.today, .habit-table td.today { background: #fff7e6; }
 .habit-table .cat { font-size: 11px; color: var(--muted); display: block; }
 .habit-cell { cursor: pointer; user-select: none; }
@@ -350,4 +354,52 @@ main { padding: 22px; max-width: 1100px; margin: 0 auto; }
 @media (hover: none) {
   .btn, .tab, .habit-cell, .cal-cell { -webkit-tap-highlight-color: transparent; }
   .icon-btn { font-size: 16px; padding: 4px; }
+}
+
+/* ============================================================
+   MOBILE HABITS GRID — frozen panes (habit + goal/points),
+   ~5-6 date columns, starting at today.
+============================================================ */
+@media (max-width: 720px) {
+  #view-habits .habit-table th.habit-name,
+  #view-habits .habit-table td.habit-name {
+    min-width: 112px; max-width: 112px;
+    padding-left: 8px; padding-right: 6px;
+  }
+  .hn-text {
+    font-size: 13px; line-height: 1.15;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .hn-sub { gap: 4px; }
+  .hn-sub .cat { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .habit-actions { flex: none; }
+  .icon-btn { font-size: 15px; padding: 2px; }
+
+  /* Date columns: fixed narrow width so ~5-6 fit between frozen panes */
+  #view-habits .habit-table th.date-col,
+  #view-habits .habit-table td.date-col {
+    min-width: 32px; max-width: 32px; width: 32px;
+    padding: 8px 0; font-size: 12px;
+  }
+  #view-habits .habit-table td.habit-cell { font-size: 15px; }
+
+  /* Frozen right pane: Goal then Points */
+  #view-habits .habit-table th.col-points,
+  #view-habits .habit-table td.col-points {
+    position: sticky; right: 0; z-index: 2;
+    min-width: 40px; max-width: 40px; width: 40px;
+    padding: 8px 2px; font-size: 12px;
+    background: var(--card);
+  }
+  #view-habits .habit-table th.col-goal,
+  #view-habits .habit-table td.col-goal {
+    position: sticky; right: 40px; z-index: 2;
+    min-width: 48px; max-width: 48px; width: 48px;
+    padding: 8px 2px; font-size: 12px;
+    background: var(--card);
+    box-shadow: -2px 0 4px rgba(16, 24, 40, .05);
+  }
+  #view-habits .habit-table thead th.col-points,
+  #view-habits .habit-table thead th.col-goal { z-index: 3; background: #f0f3fa; }
+  #view-habits .habit-table thead th.habit-name { z-index: 3; }
 }
