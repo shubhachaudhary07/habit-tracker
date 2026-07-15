@@ -55,38 +55,104 @@ let roleLocked = false; // local-only lock driven by role (never synced)
 
 function isAdminRole() { return !ROLE || ADMIN_ROLES.includes(ROLE); }
 
-// ---------- Cloud sync (Firebase Firestore) ----------
+// ---------- Cloud sync (Firebase Firestore) + Auth ----------
 let db = null, familyRef = null, cloudTimer = null, cloudReady = false;
+let authUser = null, firebaseInited = false;
 
+function ensureFirebase() {
+  if (firebaseInited) return true;
+  if (!window.FIREBASE_CONFIG || typeof firebase === "undefined") return false;
+  try { firebase.initializeApp(window.FIREBASE_CONFIG); firebaseInited = true; return true; }
+  catch (e) { console.warn("Firebase init failed:", e); return false; }
+}
+
+// Orchestrates: local-only, cloud-only, or cloud + login depending on config.
 function initCloud() {
-  if (!window.FIREBASE_CONFIG || typeof firebase === "undefined") return; // local-only mode
-  try {
-    firebase.initializeApp(window.FIREBASE_CONFIG);
-    db = firebase.firestore();
-    familyRef = db.collection("families").doc(window.FAMILY_ID || "family");
-    familyRef.onSnapshot(
-      (doc) => {
-        if (doc.metadata.hasPendingWrites) return; // ignore our own just-written data
-        const data = doc.data();
-        if (data && Array.isArray(data.profiles)) {
-          // Sync only shared DATA; keep this device's own view/lock settings.
-          state.profiles = data.profiles;
-          if (typeof data.pin !== "undefined") state.pin = data.pin;
-          migrate();
-          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
-          if (!state.currentProfileId && state.profiles[0]) state.currentProfileId = state.profiles[0].id;
-          applyRoleLock();
-          renderAll();
-        } else if (!cloudReady) {
-          cloudSave(true); // first run: seed the cloud with local data
-        }
-        cloudReady = true;
-      },
-      (err) => console.warn("Cloud sync error:", err)
-    );
-  } catch (e) {
-    console.warn("Cloud init failed, running local-only:", e);
+  if (!ensureFirebase()) return; // local-only mode
+  if (window.REQUIRE_LOGIN && firebase.auth) initAuth();
+  else startCloud();
+}
+
+// Email/password login gate.
+function initAuth() {
+  const auth = firebase.auth();
+  $("authGate").classList.add("show"); // show until we know the auth state
+
+  $("authForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    $("authError").textContent = "";
+    $("authSubmit").disabled = true;
+    auth.signInWithEmailAndPassword($("authEmail").value.trim(), $("authPassword").value)
+      .catch((err) => { $("authError").textContent = friendlyAuthError(err); })
+      .finally(() => { $("authSubmit").disabled = false; });
+  });
+  $("signOutBtn").addEventListener("click", () => auth.signOut());
+
+  auth.onAuthStateChanged((user) => {
+    authUser = user || null;
+    if (!user) {
+      document.body.classList.remove("authed");
+      $("authGate").classList.add("show");
+      return;
+    }
+    document.body.classList.add("authed");
+    $("authGate").classList.remove("show");
+    $("authPassword").value = "";
+    startCloud();
+    applyRoleLock();
+    renderAll();
+  });
+}
+
+// Begin real-time Firestore sync of the shared family data.
+function startCloud() {
+  if (familyRef) return; // already running
+  db = firebase.firestore();
+  familyRef = db.collection("families").doc(window.FAMILY_ID || "family");
+  familyRef.onSnapshot(
+    (doc) => {
+      if (doc.metadata.hasPendingWrites) return; // ignore our own just-written data
+      const data = doc.data();
+      if (data && Array.isArray(data.profiles)) {
+        // Sync only shared DATA; keep this device's own view/lock settings.
+        state.profiles = data.profiles;
+        if (typeof data.pin !== "undefined") state.pin = data.pin;
+        migrate();
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+        if (!state.currentProfileId && state.profiles[0]) state.currentProfileId = state.profiles[0].id;
+        applyRoleLock();
+        renderAll();
+      } else if (!cloudReady) {
+        cloudSave(true); // first run: seed the cloud with local data
+      }
+      cloudReady = true;
+    },
+    (err) => console.warn("Cloud sync error:", err)
+  );
+}
+
+function friendlyAuthError(err) {
+  const c = (err && err.code) || "";
+  if (c.includes("wrong-password") || c.includes("invalid-credential")) return "Wrong email or password.";
+  if (c.includes("user-not-found")) return "No account found for that email.";
+  if (c.includes("invalid-email")) return "That doesn't look like a valid email.";
+  if (c.includes("too-many-requests")) return "Too many attempts. Please try again later.";
+  if (c.includes("network")) return "Network error. Check your connection.";
+  return (err && err.message) || "Sign-in failed.";
+}
+
+// Determine access from the login account (preferred) or the URL role.
+function effectiveRole() {
+  if (window.REQUIRE_LOGIN && authUser && authUser.email) {
+    const email = authUser.email.trim().toLowerCase();
+    const admins = (window.ADMIN_EMAILS || []).map((e) => String(e).toLowerCase());
+    if (admins.includes(email)) return { admin: true, profileName: null };
+    const map = window.USER_PROFILES || {};
+    const key = Object.keys(map).find((k) => k.toLowerCase() === email);
+    return { admin: false, profileName: key ? map[key] : null };
   }
+  if (isAdminRole()) return { admin: true, profileName: null };
+  return { admin: false, profileName: ROLE };
 }
 
 // Push shared data (profiles + pin only) to the cloud, debounced.
@@ -258,17 +324,20 @@ function toggleLock() {
   renderAll();
 }
 
-// Applies the URL role (?u=...) on top of the manual Kid Mode.
+// Applies the effective role (from login account or URL) on top of Kid Mode.
 function applyRoleLock() {
-  if (ROLE && !isAdminRole()) {
-    // Child role: lock to the profile whose name matches the role.
+  const r = effectiveRole();
+  if (!r.admin) {
+    // Child: lock to the profile whose name matches.
     roleLocked = true;
-    const prof = state.profiles.find((p) => (p.name || "").trim().toLowerCase() === ROLE);
+    const prof = r.profileName
+      ? state.profiles.find((p) => (p.name || "").trim().toLowerCase() === r.profileName.trim().toLowerCase())
+      : null;
     if (prof) {
       state.currentProfileId = prof.id;
       $("lockedProfileName").textContent = prof.name;
     } else {
-      const nice = ROLE.charAt(0).toUpperCase() + ROLE.slice(1);
+      const nice = r.profileName || "Your profile";
       $("lockedProfileName").textContent = `${nice} — ask admin to create this profile`;
       state.currentProfileId = null;
     }
@@ -276,9 +345,9 @@ function applyRoleLock() {
     document.body.classList.remove("role-admin");
     return;
   }
-  // Admin (or no role): full access.
+  // Admin: full access.
   roleLocked = false;
-  if (ROLE) {
+  if (ROLE || window.REQUIRE_LOGIN) {
     state.locked = false;
     document.body.classList.add("role-admin");
     document.body.classList.remove("kid-mode", "role-kid");

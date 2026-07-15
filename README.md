@@ -52,8 +52,43 @@ Without this, each device keeps its own separate data. To sync across phones:
 4. Paste that object into `firebase-config.js` (replace the `null`), commit, and push.
 5. Everyone now shares the same data in real time.
 
-Note: test-mode Firestore rules are open. For a private family tool this is usually fine,
-but see the app author if you want to add sign-in later.
+### Private login (recommended) — only your family can access the data
+
+Test-mode Firestore is open to anyone with the config. To lock it down so only your
+family can read/write, add email/password login:
+
+1. In Firebase: **Build → Authentication → Get started → Sign-in method → Email/Password → Enable.**
+2. **Authentication → Users → Add user** — create one account per person, e.g.
+   `shubha@example.com`, `darsh@example.com`, `gauri@example.com` (set a password for each).
+3. In `firebase-config.js`, set:
+   ```js
+   window.REQUIRE_LOGIN = true;
+   window.ADMIN_EMAILS = ["shubha@example.com"];
+   window.USER_PROFILES = {
+     "darsh@example.com": "Darsh",
+     "gauri@example.com": "Gauri"
+   };
+   ```
+4. Lock the database. In **Firestore → Rules**, paste this and Publish (use your real emails):
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /families/{doc} {
+         allow read, write: if request.auth != null &&
+           request.auth.token.email in [
+             'shubha@example.com', 'darsh@example.com', 'gauri@example.com'
+           ];
+       }
+     }
+   }
+   ```
+5. Commit and push. Now everyone signs in with their email/password. The admin account
+   sees all profiles; each child account is locked to their own profile automatically —
+   no need for the `?u=` URL anymore (though it still works when login is off).
+
+With login on, only those three email accounts can access the data, even if someone
+finds the project config. Each person stays signed in across refreshes.
 
 ## Run locally
 

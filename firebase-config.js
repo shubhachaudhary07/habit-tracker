@@ -24,3 +24,21 @@ window.FIREBASE_CONFIG = {
 
 // A shared id for your family's data. Everyone must use the SAME value.
 window.FAMILY_ID = "chaudhary-family";
+
+/* ------------------------------------------------------------
+   LOGIN (optional, for real privacy)
+   Turn this on AFTER you enable Email/Password sign-in in Firebase
+   and create one account per family member (see README).
+------------------------------------------------------------ */
+window.REQUIRE_LOGIN = false; // set to true once accounts are created
+
+// Emails that get full admin access (see/manage everyone).
+window.ADMIN_EMAILS = [
+  // "shubha@example.com"
+];
+
+// Map each child's login email to the profile name they should be locked to.
+window.USER_PROFILES = {
+  // "darsh@example.com": "Darsh",
+  // "gauri@example.com": "Gauri"
+};

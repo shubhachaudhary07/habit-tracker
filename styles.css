@@ -487,3 +487,31 @@ body.kid-mode #lockBtn { border-color: var(--amber); color: var(--amber); }
 
 /* When the role is set by the URL (?u=...), hide the manual lock button */
 body.role-admin #lockBtn, body.role-kid #lockBtn { display: none; }
+
+/* ============================================================
+   LOGIN SCREEN
+============================================================ */
+#signOutBtn { display: none; } /* shown only when logged in */
+body.authed #signOutBtn { display: inline-block; }
+
+.auth-gate {
+  display: none;
+  position: fixed; inset: 0; z-index: 2000;
+  background: var(--bg);
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+.auth-gate.show { display: flex; }
+.auth-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 26px 22px;
+  width: 100%; max-width: 340px;
+}
+.auth-sub { text-align: center; color: var(--muted); margin: 0 0 18px; }
+.auth-card label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+.auth-card label input { display: block; width: 100%; margin-top: 5px; padding: 10px; }
+.auth-card .btn { width: 100%; padding: 11px; margin-top: 4px; }
+.auth-error { color: var(--red); font-size: 13px; min-height: 18px; margin: 0 0 8px; text-align: center; }
