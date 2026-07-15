@@ -109,9 +109,13 @@ main { padding: 22px; max-width: 1100px; margin: 0 auto; }
 }
 .points-banner .star { color: var(--amber); }
 
-.table-wrap { overflow-x: auto; }
-.habit-table { border-collapse: collapse; width: 100%; background: var(--card); border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); }
-.habit-table th, .habit-table td { border: 1px solid var(--line); padding: 6px 4px; text-align: center; font-size: 13px; }
+.table-wrap { overflow-x: auto; border-radius: 10px; box-shadow: var(--shadow); }
+/* border-collapse: separate (not collapse) + no overflow:hidden ancestor
+   are both required for position: sticky columns to work on mobile. */
+.habit-table { border-collapse: separate; border-spacing: 0; width: 100%; background: var(--card); }
+.habit-table th, .habit-table td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 6px 4px; text-align: center; font-size: 13px; }
+.habit-table th:first-child, .habit-table td:first-child { border-left: 1px solid var(--line); }
+.habit-table thead th { border-top: 1px solid var(--line); }
 .habit-table th.habit-name, .habit-table td.habit-name { text-align: left; min-width: 190px; padding-left: 12px; }
 .habit-table thead th { background: #f0f3fa; color: var(--muted); font-weight: 600; }
 .hn-main { display: flex; align-items: center; }
