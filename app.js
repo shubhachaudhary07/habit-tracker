@@ -66,6 +66,9 @@ function load() {
   return {
     currentProfileId: null,
     profiles: [],
+    pin: null,          // parent PIN to unlock Kid Mode
+    locked: false,      // is Kid Mode active
+    lockedProfileId: null,
   };
 }
 
@@ -108,9 +111,17 @@ const EVENT_TYPES = {
   other: "📌",
 };
 
-// Make sure older saved profiles have an events array
+// Make sure older saved profiles/state have the newer fields
 function migrate() {
   state.profiles.forEach((p) => { if (!p.events) p.events = []; });
+  if (typeof state.pin === "undefined") state.pin = null;
+  if (typeof state.locked === "undefined") state.locked = false;
+  if (typeof state.lockedProfileId === "undefined") state.lockedProfileId = null;
+  // If a locked profile was removed, drop the lock so the app isn't stuck.
+  if (state.locked && !state.profiles.some((p) => p.id === state.lockedProfileId)) {
+    state.locked = false;
+    state.lockedProfileId = null;
+  }
 }
 
 // ---------- Element refs ----------
@@ -130,6 +141,7 @@ function renderProfiles() {
 }
 
 profileSelect.addEventListener("change", (e) => {
+  if (state.locked) { applyMode(); return; }
   state.currentProfileId = e.target.value;
   reminderDismissed = false;
   save();
@@ -137,6 +149,7 @@ profileSelect.addEventListener("change", (e) => {
 });
 
 $("addProfileBtn").addEventListener("click", () => {
+  if (state.locked) return;
   const name = prompt("Profile name (e.g. a child's name):");
   if (!name || !name.trim()) return;
   const p = newProfile(name.trim());
@@ -147,7 +160,61 @@ $("addProfileBtn").addEventListener("click", () => {
   renderAll();
 });
 
+// ---------- Kid Mode (lock to one profile) ----------
+$("lockBtn").addEventListener("click", toggleLock);
+
+function toggleLock() {
+  if (state.locked) {
+    // Unlock requires the parent PIN
+    const entered = prompt("Enter parent PIN to unlock:");
+    if (entered === null) return;
+    if (entered === state.pin) {
+      state.locked = false;
+      save();
+      applyMode();
+      renderAll();
+    } else {
+      alert("Incorrect PIN.");
+    }
+    return;
+  }
+
+  // Turning Kid Mode ON
+  if (!state.pin) {
+    const pin = prompt("Create a parent PIN (needed to unlock and manage habits):");
+    if (!pin || !pin.trim()) return;
+    const confirmPin = prompt("Re-enter the PIN to confirm:");
+    if (confirmPin !== pin) { alert("PINs did not match. Try again."); return; }
+    state.pin = pin.trim();
+  }
+  const p = currentProfile();
+  if (!p) return;
+  const ok = confirm(
+    `Lock the app to "${p.name}"'s profile (Kid Mode)?\n\n` +
+    `They can tick habits, use To-Do, Calendar and Reports, and add/edit their own events, ` +
+    `but cannot add or edit habits or switch profiles.\n\nEnter your PIN to unlock later.`
+  );
+  if (!ok) return;
+  state.locked = true;
+  state.lockedProfileId = p.id;
+  save();
+  applyMode();
+  renderAll();
+}
+
+// Applies lock restrictions to the UI and forces the locked profile.
+function applyMode() {
+  if (state.locked && state.lockedProfileId) {
+    state.currentProfileId = state.lockedProfileId;
+  }
+  document.body.classList.toggle("kid-mode", !!state.locked);
+  const p = currentProfile();
+  $("lockedProfileName").textContent = p ? p.name : "";
+  $("lockBtn").textContent = state.locked ? "🔒 Unlock" : "🔒 Kid Mode";
+}
+
 $("deleteProfileBtn").addEventListener("click", () => {
+  if (state.locked) return;
   const p = currentProfile();
   if (!p) return;
   if (state.profiles.length === 1) {
@@ -311,6 +378,7 @@ function restoreHabitScroll() {
 }
 
 function deleteHabit(id) {
+  if (state.locked) return; // Kid Mode: cannot delete habits
   const p = currentProfile();
   if (!confirm("Delete this habit and its history?")) return;
   p.habits = p.habits.filter((h) => h.id !== id);
@@ -328,6 +396,7 @@ $("habitModal").addEventListener("click", (e) => {
 });
 
 function openHabitModal(habit) {
+  if (state.locked) return; // Kid Mode: habits are fill-only
   editingHabitId = habit ? habit.id : null;
   $("habitModalTitle").textContent = habit ? "Edit Habit" : "Add Habit";
   $("habitName").value = habit ? habit.name : "";
@@ -365,6 +434,7 @@ function closeHabitModal() {
 }
 
 function saveHabitFromModal() {
+  if (state.locked) return; // Kid Mode: cannot create/edit habits
   const p = currentProfile();
   const name = $("habitName").value.trim();
   if (!name) { alert("Please enter a habit name."); return; }
@@ -816,5 +886,6 @@ function renderAll() {
 
 seedIfEmpty();
 migrate();
+applyMode();
 save();
 renderAll();

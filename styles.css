@@ -465,3 +465,22 @@ body.modal-open { overflow: hidden; }
   /* The habit table is the ONLY thing meant to scroll horizontally */
   .table-wrap { max-width: 100%; }
 }
+
+/* ============================================================
+   KID MODE — locked to one profile, habits are read/tick only
+============================================================ */
+.locked-name { display: none; font-weight: 700; font-size: 15px; padding: 6px 4px; }
+
+body.kid-mode .profile-area label,
+body.kid-mode #profileSelect,
+body.kid-mode #addProfileBtn,
+body.kid-mode #deleteProfileBtn { display: none; }
+
+body.kid-mode .locked-name { display: inline; }
+
+/* Habits become fill-only: no add button, no edit/delete icons */
+body.kid-mode #addHabitBtn { display: none; }
+body.kid-mode .habit-actions { display: none; }
+
+/* Little lock badge look for the unlock button while locked */
+body.kid-mode #lockBtn { border-color: var(--amber); color: var(--amber); }
