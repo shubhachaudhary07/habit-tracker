@@ -9,18 +9,16 @@
    only on the current device (no sharing between phones).
 ============================================================ */
 
-// Paste your Firebase web config object here (or leave as null for local-only).
-window.FIREBASE_CONFIG = null;
-/* Example once you have it:
+// Firebase web config (enables cloud sync across devices).
 window.FIREBASE_CONFIG = {
-  apiKey: "AIza...",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:abc123"
+  apiKey: "AIzaSyCbFbif1oHHv2AifeL_jOWVFVwO1kuLwiw",
+  authDomain: "habit-tracker-1f97b.firebaseapp.com",
+  projectId: "habit-tracker-1f97b",
+  storageBucket: "habit-tracker-1f97b.firebasestorage.app",
+  messagingSenderId: "2005871959",
+  appId: "1:2005871959:web:1e65cf03669c474514e212",
+  measurementId: "G-15V3J5NYNQ"
 };
-*/
 
 // A shared id for your family's data. Everyone must use the SAME value.
 window.FAMILY_ID = "chaudhary-family";
