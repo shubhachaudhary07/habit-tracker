@@ -1021,6 +1021,113 @@ function renderReminder() {
     reminderDismissed = true;
     banner.classList.remove("show");
   });
+
+  // Chime + popup once when the app opens on a day that has events.
+  maybeShowReminderPopup(items);
+}
+
+// ---------- Beep sound (Web Audio, no file needed) ----------
+let audioCtx = null;
+let pendingBeep = false;
+
+function getAudioCtx() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { audioCtx = null; }
+  }
+  return audioCtx;
+}
+
+// Two short "beep beep" tones.
+function playBeep(times = 2) {
+  const ctx = getAudioCtx();
+  if (!ctx) return false;
+  if (ctx.state === "suspended") { ctx.resume(); }
+  if (ctx.state !== "running") return false; // blocked until a user tap
+  let t = ctx.currentTime + 0.02;
+  for (let i = 0; i < times; i++) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.2);
+    t += 0.28;
+  }
+  return true;
+}
+
+// Try to beep now; if the browser blocks audio (e.g. iOS before any tap),
+// remember it and beep on the user's first tap instead.
+function requestBeep() {
+  if (!playBeep()) pendingBeep = true;
+}
+
+// First user gesture unlocks audio; play any pending beep.
+function primeAudio() {
+  const ctx = getAudioCtx();
+  if (ctx && ctx.state === "suspended") ctx.resume();
+  if (pendingBeep) { pendingBeep = false; playBeep(); }
+}
+["pointerdown", "touchstart", "click", "keydown"].forEach((ev) =>
+  window.addEventListener(ev, primeAudio));
+
+// ---------- Reminder popup ----------
+let reminderPopupShown = false;
+const firedEventIds = new Set();
+
+$("reminderPopupOk").addEventListener("click", closeReminderPopup);
+$("reminderPopup").addEventListener("click", (e) => {
+  if (e.target.id === "reminderPopup") closeReminderPopup();
+});
+
+function showReminderPopup(items, title) {
+  $("reminderPopupTitle").textContent = title;
+  const list = $("reminderPopupList");
+  list.innerHTML = "";
+  items.forEach((e) => {
+    const row = document.createElement("div");
+    row.className = "event-day-item";
+    row.innerHTML = `
+      <span>${EVENT_TYPES[e.type] || "📌"}</span>
+      <span class="e-text">${escapeHtml(e.title)}${e.note ? " · " + escapeHtml(e.note) : ""}</span>
+      ${e.time ? `<span class="e-time">${e.time}</span>` : ""}`;
+    list.appendChild(row);
+  });
+  $("reminderPopup").classList.add("open");
+  document.body.classList.add("modal-open");
+  requestBeep();
+}
+
+function closeReminderPopup() {
+  $("reminderPopup").classList.remove("open");
+  document.body.classList.remove("modal-open");
+}
+
+// Shows the "today's events" popup once per app session.
+function maybeShowReminderPopup(items) {
+  if (reminderPopupShown || !items.length) return;
+  reminderPopupShown = true;
+  showReminderPopup(items, `🔔 Today's Reminders (${items.length})`);
+}
+
+// While the app is open, beep at each event's exact time (HH:MM).
+function startEventAlarms() {
+  setInterval(() => {
+    const p = currentProfile();
+    if (!p) return;
+    const now = new Date();
+    const hhmm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    eventsOn(p, iso(now)).forEach((e) => {
+      if (e.time && e.time === hhmm && !firedEventIds.has(e.id)) {
+        firedEventIds.add(e.id);
+        showReminderPopup([e], `⏰ ${escapeHtml(e.title)} — now`);
+      }
+    });
+  }, 20000);
 }
 
 // ---------- Utilities & init ----------
@@ -1045,3 +1152,4 @@ initCloud();      // sets up cloud sync (no-op if not configured)
 applyRoleLock();  // apply URL role (?u=shubha/darsh/gauri)
 save();           // persist locally; cloud write is suppressed until first sync
 renderAll();
+startEventAlarms(); // beep at each event's time while the app stays open

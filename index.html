@@ -140,6 +140,17 @@
     </section>
   </main>
 
+  <!-- Reminder popup (shown on open when there are events today, and at event time) -->
+  <div id="reminderPopup" class="modal-backdrop">
+    <div class="modal">
+      <h3 id="reminderPopupTitle">🔔 Today's Reminders</h3>
+      <div id="reminderPopupList" class="event-day-list"></div>
+      <div class="modal-actions">
+        <button id="reminderPopupOk" class="btn primary">Got it</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Habit modal -->
   <div id="habitModal" class="modal-backdrop">
     <div class="modal">
