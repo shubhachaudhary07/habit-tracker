@@ -408,3 +408,25 @@ main { padding: 22px; max-width: 1100px; margin: 0 auto; }
   #view-habits .habit-table thead th.col-goal { z-index: 3; background: #f0f3fa; }
   #view-habits .habit-table thead th.habit-name { z-index: 3; }
 }
+
+/* ============================================================
+   MODAL + BOTTOM NAV: keep modal buttons reachable on mobile
+============================================================ */
+body.modal-open { overflow: hidden; }
+
+@media (max-width: 720px) {
+  /* Hide the bottom navigation so it can't cover the modal buttons */
+  body.modal-open .tabs { display: none; }
+
+  /* Pin the action buttons to the bottom of the sheet, always visible */
+  .modal { padding-bottom: 0; }
+  .modal-actions {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    margin: 12px -18px 0;
+    padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    z-index: 1;
+  }
+}

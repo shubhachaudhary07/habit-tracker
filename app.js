@@ -337,6 +337,7 @@ function openHabitModal(habit) {
   selectedEmoji = habit && habit.emoji ? habit.emoji : "🎯";
   buildEmojiPicker();
   $("habitModal").classList.add("open");
+  document.body.classList.add("modal-open");
   $("habitName").focus();
 }
 
@@ -359,6 +360,7 @@ function buildEmojiPicker() {
 
 function closeHabitModal() {
   $("habitModal").classList.remove("open");
+  document.body.classList.remove("modal-open");
   editingHabitId = null;
 }
 
@@ -714,6 +716,7 @@ function openEventModal(dateStr) {
   $("eventNote").value = "";
   renderEventDayList();
   $("eventModal").classList.add("open");
+  document.body.classList.add("modal-open");
   $("eventTitle").focus();
 }
 
@@ -741,6 +744,7 @@ function renderEventDayList() {
 
 function closeEventModal() {
   $("eventModal").classList.remove("open");
+  document.body.classList.remove("modal-open");
   eventModalDate = null;
 }
 
