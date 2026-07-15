@@ -28,15 +28,15 @@ window.FAMILY_ID = "chaudhary-family";
    Turn this on AFTER you enable Email/Password sign-in in Firebase
    and create one account per family member (see README).
 ------------------------------------------------------------ */
-window.REQUIRE_LOGIN = false; // set to true once accounts are created
+window.REQUIRE_LOGIN = true; // login is now required
 
 // Emails that get full admin access (see/manage everyone).
 window.ADMIN_EMAILS = [
-  // "shubha@example.com"
+  "shubhachaudhary07@gmail.com"
 ];
 
 // Map each child's login email to the profile name they should be locked to.
 window.USER_PROFILES = {
-  // "darsh@example.com": "Darsh",
-  // "gauri@example.com": "Gauri"
+  "darshchaudhary0708@gmail.com": "Darsh",
+  "gauri29@gmail.com": "Gauri"
 };
